@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(75, 85, 99, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+/* Smooth animations */
+* {
+  transition: all 0.2s ease;
+}
+
+/* Custom glassmorphism effects */
+.glass {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(75, 85, 99, 0.2);
+}
+
+.glass-light {
+  background: rgba(55, 65, 81, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* Enhanced shadows */
+.shadow-modern {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+}
+
+.shadow-modern-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
+.bg-gradient-secondary {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+}
+
+.bg-gradient-accent {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+/* Button enhancements */
+.btn-primary {
+  @apply bg-gradient-accent text-white font-semibold py-3 px-6 rounded-xl shadow-modern;
+  transform: translateY(0);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px -3px rgba(59, 130, 246, 0.3), 0 6px 8px -2px rgba(59, 130, 246, 0.2);
+}
+
+.btn-secondary {
+  @apply bg-gradient-secondary text-white font-medium py-2 px-4 rounded-lg shadow-modern border border-gray-600;
+}
+
+.btn-secondary:hover {
+  @apply border-gray-500 bg-gray-600;
+  transform: translateY(-1px);
+}
+
+/* Card enhancements */
+.card {
+  @apply glass rounded-xl shadow-modern;
+}
+
+.card-hover {
+  @apply card;
+  transform: translateY(0);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.4), 0 6px 8px -2px rgba(0, 0, 0, 0.3);
+}
