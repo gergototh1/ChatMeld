@@ -18,6 +18,7 @@ export interface ApiKeys {
 export interface LlmModel {
   id: string;
   label: string;
+  maxTokens?: number;
 }
 
 export interface LlmProvider {
@@ -121,8 +122,8 @@ export const LLM_PROVIDERS: LlmProvider[] = [
     defaultModel: 'gemini-2.5-flash-lite',
     models: [
       { id: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite' },
-      { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
-      { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro' },
+      { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash', maxTokens: 32000 },
+      { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro', maxTokens: 32000 },
     ],
     call: geminiCall,
   },
@@ -131,14 +132,20 @@ export const DEFAULT_MODEL = LLM_PROVIDERS[0].defaultModel;
 export const ALL_MODELS = LLM_PROVIDERS.flatMap((p) => p.models);
 
 const MODEL_PROVIDER_MAP: Record<string, LlmProvider> = {};
+const MODEL_INFO_MAP: Record<string, LlmModel> = {};
 for (const provider of LLM_PROVIDERS) {
   for (const model of provider.models) {
     MODEL_PROVIDER_MAP[model.id] = provider;
+    MODEL_INFO_MAP[model.id] = model;
   }
 }
 
 export function getProviderForModel(model: string): LlmProvider | undefined {
   return MODEL_PROVIDER_MAP[model];
+}
+
+export function getModelInfo(model: string): LlmModel | undefined {
+  return MODEL_INFO_MAP[model];
 }
 
 export function getAvailableModels(apiKeys: ApiKeys): LlmModel[] {

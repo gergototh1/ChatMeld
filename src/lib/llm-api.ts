@@ -1,6 +1,10 @@
 // src/lib/llm-api.ts
 import type { Message } from '../types';
-import { getProviderForModel, type ApiKeys } from './llm-providers';
+import {
+  getProviderForModel,
+  getModelInfo,
+  type ApiKeys,
+} from './llm-providers';
 
 interface LlmApiOptions {
   model: string;
@@ -17,11 +21,14 @@ export async function callLlmApi(options: LlmApiOptions): Promise<string> {
     model,
     messages,
     temperature = 0.7,
-    max_tokens = 4000,
+    max_tokens,
     stop,
     apiKeys,
     signal,
   } = options;
+
+  const defaultMaxTokens = getModelInfo(model)?.maxTokens ?? 4000;
+  const resolvedMaxTokens = max_tokens ?? defaultMaxTokens;
 
   const provider = getProviderForModel(model);
   if (!provider) {
@@ -35,7 +42,7 @@ export async function callLlmApi(options: LlmApiOptions): Promise<string> {
 
   try {
     return await provider.call(
-      { model, messages, temperature, max_tokens, stop, signal },
+      { model, messages, temperature, max_tokens: resolvedMaxTokens, stop, signal },
       apiKey,
     );
   } catch (error) {
