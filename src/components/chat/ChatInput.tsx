@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Send } from 'lucide-react';
 
 interface ChatInputProps {
@@ -12,9 +12,14 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   const adjustHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
+      const minHeight = 56; // matches min-h-[56px]
       const maxHeight = 24 * 6; // approx 6 lines
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+      const newHeight = Math.min(
+        Math.max(textarea.scrollHeight, minHeight),
+        maxHeight
+      );
+      textarea.style.height = `${newHeight}px`;
     }
   };
 
@@ -22,14 +27,16 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
     if (content.trim()) {
       onSendMessage(content);
       setContent('');
-      adjustHeight();
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    adjustHeight();
   };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [content]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
