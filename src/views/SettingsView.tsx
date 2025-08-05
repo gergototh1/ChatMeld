@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { db } from '../db';
 import type { Agent, Conversation, Message, Setting } from '../types';
@@ -24,6 +25,29 @@ const SettingsView: React.FC = () => {
   }, [init]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [openAiSaved, setOpenAiSaved] = useState(false);
+  const [googleSaved, setGoogleSaved] = useState(false);
+  const openAiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const googleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleOpenAiChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    await setOpenAiApiKey(value);
+    setOpenAiSaved(true);
+    if (openAiTimeoutRef.current) clearTimeout(openAiTimeoutRef.current);
+    openAiTimeoutRef.current = setTimeout(() => setOpenAiSaved(false), 2000);
+  };
+
+  const handleGoogleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    await setGoogleApiKey(value);
+    setGoogleSaved(true);
+    if (googleTimeoutRef.current) clearTimeout(googleTimeoutRef.current);
+    googleTimeoutRef.current = setTimeout(() => setGoogleSaved(false), 2000);
+  };
 
   type ExportData = {
     agents: Agent[];
@@ -135,27 +159,43 @@ const SettingsView: React.FC = () => {
           <label htmlFor="openAiApiKey" className="block text-sm font-medium">
             OpenAI API Key
           </label>
-          <input
-            id="openAiApiKey"
-            type="password"
-            placeholder="sk-..."
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            value={openAiApiKey}
-            onChange={(e) => setOpenAiApiKey(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              id="openAiApiKey"
+              type="password"
+              placeholder="sk-..."
+              className="w-full p-2 rounded bg-gray-700 text-white"
+              value={openAiApiKey}
+              onChange={handleOpenAiChange}
+            />
+            {openAiSaved && (
+              <span className="absolute right-0 -top-5 flex items-center gap-1 text-xs text-green-500 whitespace-nowrap">
+                <Check className="h-4 w-4" />
+                Saved
+              </span>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
           <label htmlFor="googleApiKey" className="block text-sm font-medium">
             Google AI Studio API Key
           </label>
-          <input
-            id="googleApiKey"
-            type="password"
-            placeholder="AIza..."
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            value={googleApiKey}
-            onChange={(e) => setGoogleApiKey(e.target.value)}
-          />
+          <div className="relative">
+            <input
+              id="googleApiKey"
+              type="password"
+              placeholder="AIza..."
+              className="w-full p-2 rounded bg-gray-700 text-white"
+              value={googleApiKey}
+              onChange={handleGoogleChange}
+            />
+            {googleSaved && (
+              <span className="absolute right-0 -top-5 flex items-center gap-1 text-xs text-green-500 whitespace-nowrap">
+                <Check className="h-4 w-4" />
+                Saved
+              </span>
+            )}
+          </div>
         </div>
       </section>
 
