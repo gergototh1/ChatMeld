@@ -8,12 +8,15 @@ import {
   Pause,
   Dice5,
   X,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Avatar } from '../ui/Avatar';
 import type { Agent } from '../../types';
 import { useChatStore } from '../../store/chatStore';
+import { useConversationStore } from '../../store/conversationStore';
 import type { useChatConductor } from '../../hooks/useChatConductor';
 import { useMessageStore } from '../../store/messageStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -240,22 +243,85 @@ const ActionsPanel = ({ conversationId }: { conversationId: number }) => {
   );
 };
 
-export const ChatSidebar = ({ conversationId, conductor, onClose }: { conversationId: number; conductor: ReturnType<typeof useChatConductor>; onClose?: () => void }) => {
-  const { activeConversation } = useChatStore();
+export const ChatSidebar = ({
+  conversationId,
+  conductor,
+  onClose,
+}: {
+  conversationId: number;
+  conductor: ReturnType<typeof useChatConductor>;
+  onClose?: () => void;
+}) => {
+  const { activeConversation, setActiveConversation } = useChatStore();
+  const { updateConversation } = useConversationStore();
   const { openAiApiKey, googleApiKey, initialized } = useSettingsStore();
   const apiKeys = { openAiApiKey, googleApiKey };
   const availableModels = getAvailableModels(apiKeys);
   const defaultModel = getDefaultModel(apiKeys);
 
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+
+  useEffect(() => {
+    setEditedTitle(activeConversation?.title || '');
+  }, [activeConversation]);
+
+  const handleSaveTitle = async () => {
+    if (!activeConversation) return;
+    await updateConversation(activeConversation.id, { title: editedTitle });
+    setActiveConversation({ ...activeConversation, title: editedTitle });
+    setIsEditingTitle(false);
+  };
+
   return (
-    <div className="w-80 bg-gradient-secondary text-white p-6 space-y-6 overflow-y-auto h-full shadow-modern-lg">
-      <div className="md:hidden flex justify-end">
+    <div className="w-80 bg-gradient-secondary text-white p-6 overflow-y-auto h-full shadow-modern-lg">
+      <div className="md:hidden flex justify-end mb-6">
         <button
           className="p-2 rounded-lg hover:bg-gray-700/50 transition-colors"
           onClick={onClose}
         >
           <X size={20} />
         </button>
+      </div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+        {isEditingTitle ? (
+          <>
+            <input
+              type="text"
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              className="flex-1 bg-gray-700 text-white px-2 py-1 rounded"
+            />
+            <button
+              className="p-1 rounded bg-green-600 hover:bg-green-700"
+              onClick={handleSaveTitle}
+            >
+              <Check size={16} />
+            </button>
+            <button
+              className="p-1 rounded bg-gray-600 hover:bg-gray-700"
+              onClick={() => {
+                setIsEditingTitle(false);
+                setEditedTitle(activeConversation?.title || '');
+              }}
+            >
+              <X size={16} />
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold flex-1 truncate">
+              {activeConversation?.title || 'Untitled Chat'}
+            </h2>
+            <button
+              className="p-1 rounded hover:bg-gray-700"
+              onClick={() => setIsEditingTitle(true)}
+            >
+              <Pencil size={16} />
+            </button>
+          </>
+        )}
       </div>
       <div className="space-y-4">
         {activeConversation &&
@@ -273,5 +339,6 @@ export const ChatSidebar = ({ conversationId, conductor, onClose }: { conversati
       {conductor && <ConversationInfoPanel key={conversationId} />}
       {conductor && <ActionsPanel conversationId={conversationId} />}
     </div>
+  </div>
   );
 };
