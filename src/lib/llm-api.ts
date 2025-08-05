@@ -9,6 +9,7 @@ interface LlmApiOptions {
   max_tokens?: number;
   stop?: string[];
   apiKeys: ApiKeys;
+  signal?: AbortSignal;
 }
 
 export async function callLlmApi(options: LlmApiOptions): Promise<string> {
@@ -19,6 +20,7 @@ export async function callLlmApi(options: LlmApiOptions): Promise<string> {
     max_tokens = 4000,
     stop,
     apiKeys,
+    signal,
   } = options;
 
   const provider = getProviderForModel(model);
@@ -33,7 +35,7 @@ export async function callLlmApi(options: LlmApiOptions): Promise<string> {
 
   try {
     return await provider.call(
-      { model, messages, temperature, max_tokens, stop },
+      { model, messages, temperature, max_tokens, stop, signal },
       apiKey,
     );
   } catch (error) {

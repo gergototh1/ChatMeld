@@ -35,6 +35,7 @@ export function useChatConductor(conversationId: number) {
   const isRunningRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProcessingRef = useRef(false); // New ref to track if we're already processing a message
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   const conversation = conversations.find((c) => c.id === conversationId);
   
@@ -76,6 +77,10 @@ export function useChatConductor(conversationId: number) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     finishTurn();
     if (isRunningRef.current) {
       console.log('[Conductor] Stopped');
@@ -94,91 +99,124 @@ export function useChatConductor(conversationId: number) {
   }, [messages]);
 
   const runNextTurn = useCallback(async (forcedNextSpeakerId?: number) => {
-    // Prevent multiple concurrent messages
     if (isProcessingRef.current) {
       console.log('[Conductor] Already processing a message, skipping');
       return;
     }
-    
+
     console.log('[Conductor] Triggered');
-    isProcessingRef.current = true; // Set processing flag
+    isProcessingRef.current = true;
     startConductor();
-    
-    if (isPaused && !forcedNextSpeakerId && (!messages.length || messages[messages.length - 1].agentId !== 'user')) {
-      console.log('[Conductor] Paused');
-      stopConductor();
-      return;
-    }
-    
-    const apiKeys = { openAiApiKey, googleApiKey };
-    if (!Object.values(apiKeys).some(Boolean)) {
-      console.log('[Conductor] Missing API key');
-      stopConductor();
-      return;
-    }
-    
-    if (agents.length === 0) {
-      console.log('[Conductor] No agents in conversation');
-      stopConductor();
-      return;
-    }
-    
-    setIsThinking(true);
-    console.log('[Conductor] Determining next speaker');
-    const nextSpeakerId =
-      forcedNextSpeakerId ??
-      (await determineNextSpeaker(messages, agents, apiKeys, maxContextMessages));
-    
-    if (!nextSpeakerId) {
-      console.log('[Conductor] Could not determine next speaker');
-      stopConductor();
-      return;
-    }
-    
-    setThinkingAgentId(nextSpeakerId);
-    await updateConversation(conversationId, { nextSpeakerId });
-    console.log(`[Conductor] Next speaker is ${nextSpeakerId}`);
-    
-    const delay = getNextMessageDelay(messages[messages.length - 1]);
-    console.log(`[Conductor] Waiting ${delay}ms before generating message`);
-    await new Promise((res) => setTimeout(res, delay));
-    
-    const lastMsg = messages[messages.length - 1];
-    if (isPaused && !forcedNextSpeakerId && lastMsg && lastMsg.agentId !== 'user') {
-      console.log('[Conductor] Paused during wait');
-      stopConductor();
-      return;
-    }
-    
-    console.log(`[Conductor] Generating response for ${nextSpeakerId}`);
-    const checkIn = autoAdvance && getAiSinceUser() >= maxAutoAdvance; // Check-in with User after limit
-    
-    // Find the agent with all settings applied
-    const agent = agents.find(a => a.id === nextSpeakerId);
-    
-    const responseContent = await generateAgentResponse(
-      nextSpeakerId,
-      messages,
-      agents,
-      apiKeys,
-      { checkIn, traits: agent?.traits }, // Pass traits explicitly
-      maxContextMessages,
-    );
-    
-    if (responseContent) {
-      console.log(`[Conductor] Adding message from ${nextSpeakerId}:`, responseContent);
-      await addMessage({
-        conversationId,
-        agentId: nextSpeakerId,
-        content: responseContent,
-      });
-      
-      if (checkIn) {
-        setAutoAdvance(false);
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    try {
+      if (
+        isPaused &&
+        !forcedNextSpeakerId &&
+        (!messages.length || messages[messages.length - 1].agentId !== 'user')
+      ) {
+        console.log('[Conductor] Paused');
+        stopConductor();
+        return;
       }
+
+      const apiKeys = { openAiApiKey, googleApiKey };
+      if (!Object.values(apiKeys).some(Boolean)) {
+        console.log('[Conductor] Missing API key');
+        stopConductor();
+        return;
+      }
+
+      if (agents.length === 0) {
+        console.log('[Conductor] No agents in conversation');
+        stopConductor();
+        return;
+      }
+
+      setIsThinking(true);
+      console.log('[Conductor] Determining next speaker');
+      const nextSpeakerId =
+        forcedNextSpeakerId ??
+        (await determineNextSpeaker(
+          messages,
+          agents,
+          apiKeys,
+          maxContextMessages,
+          abortController.signal,
+        ));
+
+      if (!nextSpeakerId) {
+        console.log('[Conductor] Could not determine next speaker');
+        stopConductor();
+        return;
+      }
+
+      setThinkingAgentId(nextSpeakerId);
+      await updateConversation(conversationId, { nextSpeakerId });
+      console.log(`[Conductor] Next speaker is ${nextSpeakerId}`);
+
+      const delay = getNextMessageDelay(messages[messages.length - 1]);
+      console.log(`[Conductor] Waiting ${delay}ms before generating message`);
+      await new Promise((res) => setTimeout(res, delay));
+
+      if (!isRunningRef.current || abortController.signal.aborted) {
+        console.log('[Conductor] Aborted before generating message');
+        return;
+      }
+
+      const lastMsg = messages[messages.length - 1];
+      if (
+        isPaused &&
+        !forcedNextSpeakerId &&
+        lastMsg &&
+        lastMsg.agentId !== 'user'
+      ) {
+        console.log('[Conductor] Paused during wait');
+        stopConductor();
+        return;
+      }
+
+      console.log(`[Conductor] Generating response for ${nextSpeakerId}`);
+      const checkIn = autoAdvance && getAiSinceUser() >= maxAutoAdvance; // Check-in with User after limit
+
+      const agent = agents.find((a) => a.id === nextSpeakerId);
+
+      const responseContent = await generateAgentResponse(
+        nextSpeakerId,
+        messages,
+        agents,
+        apiKeys,
+        { checkIn, traits: agent?.traits },
+        maxContextMessages,
+        abortController.signal,
+      );
+
+      if (abortController.signal.aborted) {
+        console.log('[Conductor] Response generation aborted');
+        return;
+      }
+
+      if (responseContent) {
+        console.log(
+          `[Conductor] Adding message from ${nextSpeakerId}:`,
+          responseContent,
+        );
+        await addMessage({
+          conversationId,
+          agentId: nextSpeakerId,
+          content: responseContent,
+        });
+
+        if (checkIn) {
+          setAutoAdvance(false);
+        }
+      }
+    } finally {
+      abortControllerRef.current = null;
+      finishTurn();
     }
-    
-    finishTurn();
   }, [
     isPaused,
     openAiApiKey,
@@ -197,6 +235,12 @@ export function useChatConductor(conversationId: number) {
     getAiSinceUser,
     setAutoAdvance,
   ]);
+
+  useEffect(() => {
+    return () => {
+      stopConductor();
+    };
+  }, [stopConductor]);
 
   useEffect(() => {
     // Only clear the timer, don't stop the entire conductor

@@ -6,6 +6,7 @@ export interface LlmCallParams {
   temperature?: number;
   max_tokens?: number;
   stop?: string[];
+  signal?: AbortSignal;
 }
 
 export interface ApiKeys {
@@ -28,7 +29,7 @@ export interface LlmProvider {
 }
 
 const openAiCall = async (
-  { model, messages, temperature, max_tokens, stop }: LlmCallParams,
+  { model, messages, temperature, max_tokens, stop, signal }: LlmCallParams,
   apiKey: string,
 ): Promise<string> => {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -37,6 +38,7 @@ const openAiCall = async (
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
     },
+    signal,
     body: JSON.stringify({
       model,
       messages,
@@ -59,7 +61,7 @@ const openAiCall = async (
 };
 
 const geminiCall = async (
-  { model, messages, temperature, max_tokens, stop }: LlmCallParams,
+  { model, messages, temperature, max_tokens, stop, signal }: LlmCallParams,
   apiKey: string,
 ): Promise<string> => {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -85,6 +87,7 @@ const geminiCall = async (
     headers: {
       'Content-Type': 'application/json',
     },
+    signal,
     body: JSON.stringify(body),
   });
 

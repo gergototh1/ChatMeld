@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, MessageSquare, Users, Settings } from 'lucide-react';
+import { Home, MessageSquare, Users, Settings, Github } from 'lucide-react';
 import logoUrl from '../../chatmeld-logo.svg';
 
 export const MainSidebar = () => {
@@ -13,7 +13,7 @@ export const MainSidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-gradient-secondary p-6 h-full overflow-y-auto shadow-modern-lg">
+    <div className="w-64 bg-gradient-secondary p-6 h-full overflow-y-auto shadow-modern-lg flex flex-col">
       <div className="flex items-center gap-3 mb-10">
         <div className="p-2 bg-white rounded-xl shadow-modern">
           <img src={logoUrl} alt="ChatMeld Logo" className="w-6 h-6" />
@@ -42,6 +42,18 @@ export const MainSidebar = () => {
           );
         })}
       </nav>
+      
+      <div className="mt-auto pt-6 border-t border-gray-700/50">
+        <a
+          href="https://github.com/balazspiller/ChatMeld"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-300 transition-colors text-sm"
+        >
+          <Github className="w-4 h-4" />
+          <span>View on GitHub</span>
+        </a>
+      </div>
     </div>
   );
 };

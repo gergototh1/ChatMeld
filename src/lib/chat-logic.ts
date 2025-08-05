@@ -61,6 +61,7 @@ export async function determineNextSpeaker(
   agents: Agent[],
   apiKeys: ApiKeys,
   maxContextMessages: number,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   const isFirstTurn = conversationMessages.length === 0;
   const promptTemplate = isFirstTurn ? Prompts.firstSpeaker() : Prompts.nextSpeaker();
@@ -87,6 +88,7 @@ export async function determineNextSpeaker(
     temperature: 0.5,
     max_tokens: 15,
     apiKeys,
+    signal,
   });
 
   console.log('[chat-logic] determineNextSpeaker response', response);
@@ -102,6 +104,7 @@ export async function generateAgentResponse(
   apiKeys: ApiKeys,
   options: { checkIn?: boolean; traits?: string } = {},
   maxContextMessages: number,
+  signal?: AbortSignal,
 ): Promise<string> {
   const speakingAgent = agents.find((a) => a.id === speakingAgentId);
   if (!speakingAgent) return '';
@@ -146,6 +149,7 @@ export async function generateAgentResponse(
     temperature: speakingAgent.temperature || speakingAgent.defaultTemperature || 0.7,
     messages: finalPrompt as unknown as Pick<Message, 'role' | 'content'>[],
     apiKeys,
+    signal,
   });
 
   console.log('[chat-logic] generateAgentResponse response', response);
