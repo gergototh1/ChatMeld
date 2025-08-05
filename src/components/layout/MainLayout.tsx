@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { MainSidebar } from '../sidebar/MainSidebar';
@@ -11,6 +11,10 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isChatView = location.pathname.includes('/chat/');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen bg-gradient-primary text-white">
