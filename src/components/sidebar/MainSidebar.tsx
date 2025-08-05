@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, MessageSquare, Users, Settings } from 'lucide-react';
-import logoUrl from '../../../public/chatmeld-logo.svg';
+import logoUrl from '../../chatmeld-logo.svg';
 
 export const MainSidebar = () => {
   const location = useLocation();
