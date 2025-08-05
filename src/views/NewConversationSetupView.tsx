@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { db } from '../db';
 import { useAgentStore } from '../store/agentStore';
 import { useConversationStore } from '../store/conversationStore';
@@ -10,6 +10,7 @@ import { getAvailableModels, getDefaultModel } from '../lib/llm-providers';
 const NewConversationSetupView: React.FC = () => {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { presetAgents, customAgents, fetchCustomAgents } = useAgentStore();
   const { addConversation } = useConversationStore();
@@ -22,6 +23,15 @@ const NewConversationSetupView: React.FC = () => {
   useEffect(() => {
     fetchCustomAgents();
   }, [fetchCustomAgents]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const agentId = params.get('agentId');
+    if (agentId) {
+      const id = Number(agentId);
+      setSelectedAgents((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const loadConversation = async () => {

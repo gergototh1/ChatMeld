@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { MessageSquarePlus } from 'lucide-react';
 import type { Agent } from '../types';
 import { useAgentStore } from '../store/agentStore';
 import { getAvailableModels, getDefaultModel } from '../lib/llm-providers';
@@ -42,6 +44,12 @@ const AgentsView: React.FC = () => {
   const [formData, setFormData] = useState<Omit<Agent, 'id'>>(emptyAgent);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  const categories = useMemo(
+    () => Array.from(new Set(presetAgents.map((a) => a.category))).sort(),
+    [presetAgents],
+  );
+  const [categoryFilter, setCategoryFilter] = useState<string>('All');
 
   useEffect(() => {
     if (!initialized) return;
@@ -212,13 +220,51 @@ const AgentsView: React.FC = () => {
       )}
 
       {activeTab === 'presets' && (
-        <div className="space-y-2">
-          {presetAgents.map((agent) => (
-            <div key={agent.id} className="bg-gray-800 p-4 rounded">
-              <div className="font-semibold">{agent.name}</div>
-              <p className="text-sm text-gray-400">{agent.description}</p>
-            </div>
-          ))}
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              className={`px-3 py-1 rounded ${
+                categoryFilter === 'All' ? 'bg-blue-600' : 'bg-gray-700'
+              }`}
+              onClick={() => setCategoryFilter('All')}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={`px-3 py-1 rounded ${
+                  categoryFilter === cat ? 'bg-blue-600' : 'bg-gray-700'
+                }`}
+                onClick={() => setCategoryFilter(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {presetAgents
+              .filter(
+                (agent) =>
+                  categoryFilter === 'All' || agent.category === categoryFilter,
+              )
+              .map((agent) => (
+                <div
+                  key={agent.id}
+                  className="relative bg-gray-800 p-4 rounded"
+                >
+                  <button
+                    className="absolute top-4 right-4 p-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => navigate(`/new-chat?agentId=${agent.id}`)}
+                    aria-label="Start new chat"
+                  >
+                    <MessageSquarePlus className="w-4 h-4" />
+                  </button>
+                  <div className="font-semibold">{agent.name}</div>
+                  <p className="text-sm text-gray-400">{agent.description}</p>
+                </div>
+              ))}
+          </div>
         </div>
       )}
     </div>
