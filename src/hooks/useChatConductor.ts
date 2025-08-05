@@ -34,8 +34,9 @@ export function useChatConductor(conversationId: number) {
   const [isRunning, setIsRunning] = useState(false);
   const isRunningRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isProcessingRef = useRef(false); // New ref to track if we're already processing a message
+  const isProcessingRef = useRef(false); // Track if a turn is currently being processed
   const abortControllerRef = useRef<AbortController | null>(null);
+  const turnIdRef = useRef(0); // Incrementing ID to ignore stale turns
   
   const conversation = conversations.find((c) => c.id === conversationId);
   
@@ -69,7 +70,6 @@ export function useChatConductor(conversationId: number) {
   const finishTurn = useCallback(() => {
     setIsThinking(false);
     setThinkingAgentId(null);
-    isProcessingRef.current = false; // Reset processing flag when done
   }, []);
 
   const stopConductor = useCallback(() => {
@@ -82,6 +82,7 @@ export function useChatConductor(conversationId: number) {
       abortControllerRef.current = null;
     }
     finishTurn();
+    isProcessingRef.current = false;
     if (isRunningRef.current) {
       console.log('[Conductor] Stopped');
       isRunningRef.current = false;
@@ -104,6 +105,7 @@ export function useChatConductor(conversationId: number) {
       return;
     }
 
+    const turnId = ++turnIdRef.current;
     console.log('[Conductor] Triggered');
     isProcessingRef.current = true;
     startConductor();
@@ -157,25 +159,31 @@ export function useChatConductor(conversationId: number) {
       await updateConversation(conversationId, { nextSpeakerId });
       console.log(`[Conductor] Next speaker is ${nextSpeakerId}`);
 
-      const delay = getNextMessageDelay(messages[messages.length - 1]);
-      console.log(`[Conductor] Waiting ${delay}ms before generating message`);
-      await new Promise((res) => setTimeout(res, delay));
+      const delay = forcedNextSpeakerId
+        ? 0
+        : getNextMessageDelay(messages[messages.length - 1]);
+      if (delay > 0) {
+        console.log(`[Conductor] Waiting ${delay}ms before generating message`);
+        await new Promise((res) => setTimeout(res, delay));
 
-      if (!isRunningRef.current || abortController.signal.aborted) {
-        console.log('[Conductor] Aborted before generating message');
-        return;
-      }
+        if (!isRunningRef.current || abortController.signal.aborted) {
+          console.log('[Conductor] Aborted before generating message');
+          return;
+        }
 
-      const lastMsg = messages[messages.length - 1];
-      if (
-        isPaused &&
-        !forcedNextSpeakerId &&
-        lastMsg &&
-        lastMsg.agentId !== 'user'
-      ) {
-        console.log('[Conductor] Paused during wait');
-        stopConductor();
-        return;
+        const lastMsg = messages[messages.length - 1];
+        if (
+          isPaused &&
+          !forcedNextSpeakerId &&
+          lastMsg &&
+          lastMsg.agentId !== 'user'
+        ) {
+          console.log('[Conductor] Paused during wait');
+          stopConductor();
+          return;
+        }
+      } else {
+        console.log('[Conductor] Skipping delay for forced turn');
       }
 
       console.log(`[Conductor] Generating response for ${nextSpeakerId}`);
@@ -214,8 +222,11 @@ export function useChatConductor(conversationId: number) {
         }
       }
     } finally {
-      abortControllerRef.current = null;
-      finishTurn();
+      if (turnIdRef.current === turnId) {
+        abortControllerRef.current = null;
+        isProcessingRef.current = false;
+        finishTurn();
+      }
     }
   }, [
     isPaused,
@@ -271,10 +282,20 @@ export function useChatConductor(conversationId: number) {
 
   const pause = () => setAutoAdvance(false);
   const resume = () => setAutoAdvance(true);
-  
+
   const forceTurn = (agentId: number) => {
     console.log(`Forcing turn for agent ${agentId}`);
-    stopConductor();
+    // Cancel any pending or in-progress request before forcing a turn
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    finishTurn();
+    isProcessingRef.current = false;
     runNextTurn(agentId);
   };
 
