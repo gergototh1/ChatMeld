@@ -8,14 +8,21 @@ import SettingsView from './views/SettingsView';
 import DashboardView from './views/DashboardView';
 import { useSettingsStore } from './store/settingsStore';
 import { useAgentStore } from './store/agentStore';
+import SplashScreen from './components/SplashScreen';
 
 function App() {
-  const { init } = useSettingsStore();
+  const { init, initialized } = useSettingsStore();
   const { fetchCustomAgents } = useAgentStore();
+
   useEffect(() => {
     init();
     fetchCustomAgents();
   }, [init, fetchCustomAgents]);
+
+  if (!initialized) {
+    return <SplashScreen />;
+  }
+
   return (
     <Router>
       <MainLayout>
