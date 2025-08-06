@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 
 export default defineConfig(({ command }) => ({
-  base: '/ChatMeld/',
+  base: './',
   build: {
     outDir: 'docs',
     assetsInlineLimit: Infinity,
