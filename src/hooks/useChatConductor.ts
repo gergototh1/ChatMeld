@@ -110,7 +110,8 @@ export function useChatConductor(conversationId: number) {
     return count;
   }, [messages]);
 
-  const runNextTurn = useCallback(async (forcedNextSpeakerId?: number) => {
+  const runNextTurn = useCallback(
+    async (forcedNextSpeakerId?: number, overridePause = false) => {
     if (isProcessingRef.current) {
       console.log('[Conductor] Already processing a message, skipping');
       return;
@@ -128,6 +129,7 @@ export function useChatConductor(conversationId: number) {
     try {
       if (
         isPaused &&
+        !overridePause &&
         !forcedNextSpeakerId &&
         (!messages.length || messages[messages.length - 1].agentId !== 'user')
       ) {
@@ -187,6 +189,7 @@ export function useChatConductor(conversationId: number) {
         const lastMsg = messages[messages.length - 1];
         if (
           isPaused &&
+          !overridePause &&
           !forcedNextSpeakerId &&
           lastMsg &&
           lastMsg.agentId !== 'user'
@@ -337,6 +340,11 @@ export function useChatConductor(conversationId: number) {
     runNextTurn(agentId);
   };
 
+  const advanceOne = useCallback(async () => {
+    await runNextTurn(undefined, true);
+    stopConductor();
+  }, [runNextTurn, stopConductor]);
+
   return {
     isPaused,
     isThinking,
@@ -345,6 +353,7 @@ export function useChatConductor(conversationId: number) {
     pause,
     resume,
     forceTurn,
+    advanceOne,
     handleUserTyping,
   };
 }

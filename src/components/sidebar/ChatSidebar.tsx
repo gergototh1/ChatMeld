@@ -6,6 +6,7 @@ import {
   Trash2,
   ArrowLeft,
   Pause,
+  StepForward,
   Dice5,
   X,
   Pencil,
@@ -238,7 +239,13 @@ const ConversationInfoPanel = () => {
   );
 };
 
-const ActionsPanel = ({ conversationId }: { conversationId: number }) => {
+const ActionsPanel = ({
+  conversationId,
+  conductor,
+}: {
+  conversationId: number;
+  conductor: ReturnType<typeof useChatConductor>;
+}) => {
   const { clearMessages } = useMessageStore();
   const { autoAdvance, setAutoAdvance } = useSettingsStore();
   const handleRestart = () => {
@@ -264,6 +271,18 @@ const ActionsPanel = ({ conversationId }: { conversationId: number }) => {
               <span>Enable Auto-advance</span>
             </>
           )}
+        </button>
+        <button
+          className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+            autoAdvance
+              ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+          onClick={conductor.advanceOne}
+          disabled={autoAdvance}
+        >
+          <StepForward size={16} />
+          <span>Advance one message</span>
         </button>
         <button
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600"
@@ -378,7 +397,9 @@ export const ChatSidebar = ({
             ))}
       </div>
       {conductor && <ConversationInfoPanel key={conversationId} />}
-      {conductor && <ActionsPanel conversationId={conversationId} />}
+      {conductor && (
+        <ActionsPanel conversationId={conversationId} conductor={conductor} />
+      )}
     </div>
   </div>
   );
