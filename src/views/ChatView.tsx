@@ -150,7 +150,10 @@ export const ChatView = () => {
           </button>
         )}
         <div className="max-w-4xl mx-auto w-full">
-          <ChatInput onSendMessage={handleSendMessage} />
+          <ChatInput
+            onSendMessage={handleSendMessage}
+            onUserTyping={conductor.handleUserTyping}
+          />
         </div>
       </main>
     </div>

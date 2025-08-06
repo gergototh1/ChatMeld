@@ -7,6 +7,7 @@ import { determineNextSpeaker, generateAgentResponse } from '../lib/chat-logic';
 import type { Message } from '../types';
 
 const NEXT_SPEAKER_DELAY = 3000;
+const USER_TYPING_COOLDOWN = 3000;
 
 const getNextMessageDelay = (lastMessage: Message | undefined): number => {
   if (!lastMessage || lastMessage.agentId === 'user') {
@@ -37,6 +38,9 @@ export function useChatConductor(conversationId: number) {
   const isProcessingRef = useRef(false); // Track if a turn is currently being processed
   const abortControllerRef = useRef<AbortController | null>(null);
   const turnIdRef = useRef(0); // Incrementing ID to ignore stale turns
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestStartedRef = useRef(false);
+  const needsRestartRef = useRef(false);
   
   const conversation = conversations.find((c) => c.id === conversationId);
   
@@ -77,12 +81,18 @@ export function useChatConductor(conversationId: number) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
     finishTurn();
     isProcessingRef.current = false;
+    requestStartedRef.current = false;
+    needsRestartRef.current = false;
     if (isRunningRef.current) {
       console.log('[Conductor] Stopped');
       isRunningRef.current = false;
@@ -112,6 +122,7 @@ export function useChatConductor(conversationId: number) {
 
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+    requestStartedRef.current = false;
 
     try {
       if (
@@ -186,6 +197,7 @@ export function useChatConductor(conversationId: number) {
         console.log('[Conductor] Skipping delay for forced turn');
       }
 
+      requestStartedRef.current = true;
       console.log(`[Conductor] Generating response for ${nextSpeakerId}`);
       const checkIn = autoAdvance && getAiSinceUser() >= maxAutoAdvance; // Check-in with User after limit
 
@@ -247,6 +259,29 @@ export function useChatConductor(conversationId: number) {
     setAutoAdvance,
   ]);
 
+  const handleUserTyping = useCallback(() => {
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = null;
+    }
+
+    if (isThinking && !requestStartedRef.current) {
+      console.log('[Conductor] User typing, cancelling pending message');
+      stopConductor();
+      needsRestartRef.current = true;
+    }
+
+    if (needsRestartRef.current) {
+      typingTimeoutRef.current = setTimeout(() => {
+        if (needsRestartRef.current) {
+          console.log('[Conductor] Restarting after typing cooldown');
+          needsRestartRef.current = false;
+          runNextTurn();
+        }
+      }, USER_TYPING_COOLDOWN);
+    }
+  }, [isThinking, runNextTurn, stopConductor]);
+
   useEffect(() => {
     return () => {
       stopConductor();
@@ -299,5 +334,14 @@ export function useChatConductor(conversationId: number) {
     runNextTurn(agentId);
   };
 
-  return { isPaused, isThinking, thinkingAgentId, isRunning, pause, resume, forceTurn };
+  return {
+    isPaused,
+    isThinking,
+    thinkingAgentId,
+    isRunning,
+    pause,
+    resume,
+    forceTurn,
+    handleUserTyping,
+  };
 }

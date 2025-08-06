@@ -3,9 +3,10 @@ import { Send } from 'lucide-react';
 
 interface ChatInputProps {
   onSendMessage: (content: string) => void;
+  onUserTyping?: () => void;
 }
 
-export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
+export const ChatInput = ({ onSendMessage, onUserTyping }: ChatInputProps) => {
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -32,6 +33,7 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
+    onUserTyping?.();
   };
 
   useEffect(() => {
