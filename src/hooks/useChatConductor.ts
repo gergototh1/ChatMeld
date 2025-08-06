@@ -27,6 +27,7 @@ export function useChatConductor(conversationId: number) {
     autoAdvance,
     maxAutoAdvance,
     maxContextMessages,
+    nextSpeakerModel,
     setAutoAdvance,
   } = useSettingsStore();
   const [isPaused, setIsPaused] = useState(!autoAdvance);
@@ -157,6 +158,7 @@ export function useChatConductor(conversationId: number) {
           agents,
           apiKeys,
           maxContextMessages,
+          nextSpeakerModel,
           abortController.signal,
         ));
 
@@ -256,6 +258,7 @@ export function useChatConductor(conversationId: number) {
     maxAutoAdvance,
     maxContextMessages,
     getAiSinceUser,
+    nextSpeakerModel,
     setAutoAdvance,
   ]);
 

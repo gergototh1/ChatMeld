@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 import { db } from '../db';
 import type { Agent, Conversation, Message, Setting } from '../types';
+import { getAvailableModels, getDefaultModel } from '../lib/llm-providers';
 
 const SettingsView: React.FC = () => {
   const {
@@ -12,13 +13,30 @@ const SettingsView: React.FC = () => {
     autoAdvance,
     maxAutoAdvance,
     maxContextMessages,
+    nextSpeakerModel,
     setOpenAiApiKey,
     setGoogleApiKey,
     setAutoAdvance,
     setMaxAutoAdvance,
     setMaxContextMessages,
+    setNextSpeakerModel,
     init,
   } = useSettingsStore();
+
+  const apiKeys = { openAiApiKey, googleApiKey };
+  const availableModels = getAvailableModels(apiKeys);
+  const defaultModel = getDefaultModel(apiKeys);
+  const nextSpeakerModelValue = availableModels.some(
+    (m) => m.id === nextSpeakerModel,
+  )
+    ? nextSpeakerModel
+    : defaultModel;
+
+  useEffect(() => {
+    if (nextSpeakerModel !== nextSpeakerModelValue) {
+      setNextSpeakerModel(nextSpeakerModelValue);
+    }
+  }, [nextSpeakerModel, nextSpeakerModelValue, setNextSpeakerModel]);
 
   useEffect(() => {
     init();
@@ -244,6 +262,26 @@ const SettingsView: React.FC = () => {
           />
           <span className="text-sm text-gray-400">
             Recent messages included in prompts.
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="nextSpeakerModel" className="text-sm font-medium">
+            Next Speaker Model
+          </label>
+          <select
+            id="nextSpeakerModel"
+            className="p-1 rounded bg-gray-700 text-white"
+            value={nextSpeakerModelValue}
+            onChange={(e) => setNextSpeakerModel(e.target.value)}
+          >
+            {availableModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-400">
+            Model used to determine next speaker.
           </span>
         </div>
       </section>

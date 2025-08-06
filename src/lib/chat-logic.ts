@@ -61,6 +61,7 @@ export async function determineNextSpeaker(
   agents: Agent[],
   apiKeys: ApiKeys,
   maxContextMessages: number,
+  model?: string,
   signal?: AbortSignal,
 ): Promise<number | null> {
   const isFirstTurn = conversationMessages.length === 0;
@@ -81,9 +82,9 @@ export async function determineNextSpeaker(
   const finalPrompt = buildPrompt(promptTemplate, replacements);
   console.log('[chat-logic] determineNextSpeaker prompt', finalPrompt);
 
-  const model = getDefaultModel(apiKeys);
+  const modelToUse = model || getDefaultModel(apiKeys);
   const response = await callLlmApi({
-    model,
+    model: modelToUse,
     messages: finalPrompt as unknown as Pick<Message, 'role' | 'content'>[],
     temperature: 0.5,
     max_tokens: 15,
