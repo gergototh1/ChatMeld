@@ -46,7 +46,7 @@ const AgentsView: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
   const categories = useMemo(
-    () => Array.from(new Set(presetAgents.map((a) => a.category))).sort(),
+    () => Array.from(new Set(presetAgents.map((a) => a.category).filter((cat): cat is string => cat !== undefined))).sort(),
     [presetAgents],
   );
   const [categoryFilter, setCategoryFilter] = useState<string>('All');

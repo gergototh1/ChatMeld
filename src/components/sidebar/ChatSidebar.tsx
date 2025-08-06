@@ -10,6 +10,11 @@ import {
   X,
   Pencil,
   Check,
+  Dice1,
+  Dice2,
+  Dice3,
+  Dice4,
+  Dice6,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -22,6 +27,7 @@ import { useMessageStore } from '../../store/messageStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { presetTraits } from '../../lib/presetTraits';
 import { getAvailableModels, getDefaultModel, type LlmModel } from '../../lib/llm-providers';
+import { useRef } from 'react';
 const AgentCard = ({
   agent,
   onForceTurn,
@@ -35,6 +41,7 @@ const AgentCard = ({
   defaultModel: string;
   settingsInitialized: boolean;
 }) => {
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [traits, setTraits] = useState(agent.traits || '');
   const [temperature, setTemperature] = useState(
@@ -42,11 +49,40 @@ const AgentCard = ({
   );
   const { updateActiveConversationAgentSettings } = useChatStore();
 
+  // Dice animation state
+  const diceFaces = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6];
+  const [diceIndex, setDiceIndex] = useState(4); // default to Dice5
+  const [isShuffling, setIsShuffling] = useState(false);
+  const shuffleTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleLoadRandomTrait = () => {
-    const randomTrait = presetTraits[Math.floor(Math.random() * presetTraits.length)];
-    setTraits(randomTrait);
-    updateActiveConversationAgentSettings(agent.id, { traits: randomTrait });
+    if (isShuffling) return;
+    setIsShuffling(true);
+    let shuffleCount = 0;
+    const maxShuffles = 6; // ~400ms (6 * 66ms)
+    const shuffle = () => {
+      setDiceIndex(Math.floor(Math.random() * 6));
+      shuffleCount++;
+      if (shuffleCount < maxShuffles) {
+        shuffleTimeout.current = setTimeout(shuffle, 66);
+      } else {
+        // End shuffle, pick random trait
+        const randomTrait = presetTraits[Math.floor(Math.random() * presetTraits.length)];
+        setTraits(randomTrait);
+        updateActiveConversationAgentSettings(agent.id, { traits: randomTrait });
+        setDiceIndex(Math.floor(Math.random() * 6));
+        setIsShuffling(false);
+      }
+    };
+    shuffle();
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shuffleTimeout.current) clearTimeout(shuffleTimeout.current);
+    };
+  }, []);
 
   const currentModel = agent.model || agent.defaultModel;
   const modelValue = settingsInitialized
@@ -131,10 +167,15 @@ const AgentCard = ({
             <h4 className="font-semibold text-sm mb-1">Traits</h4>
             <button
               type="button"
-              className="absolute -top-2 right-0 p-1 rounded hover:bg-gray-700"
+              className={`absolute -top-2 right-0 p-1 rounded hover:bg-gray-700 transition-transform ${isShuffling ? 'animate-spin-slow' : ''}`}
               onClick={handleLoadRandomTrait}
+              disabled={isShuffling}
+              style={{ pointerEvents: isShuffling ? 'none' : undefined }}
             >
-              <Dice5 size={16} />
+              {(() => {
+                const DiceIcon = diceFaces[diceIndex] || Dice5;
+                return <DiceIcon size={16} />;
+              })()}
             </button>
             <textarea
               className="w-full p-2 rounded bg-gray-700 text-white text-sm resize-none"
